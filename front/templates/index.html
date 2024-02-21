@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Client</title>
+    <style>
+        /* CSS styles */
+        body {
+            background-color: #2b2b2b;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        #chat-container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            background-color: #363636;
+        }
+
+        #chat-display {
+            border: 1px solid #4d4d4d;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-height: 300px;
+            overflow-y: scroll;
+        }
+
+        .message {
+            margin-bottom: 5px;
+        }
+
+        .user-message {
+            color: #007bff;
+        }
+
+        .bot-message {
+            color: #28a745;
+        }
+
+        #user-input-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            background-color: #4d4d4d;
+            color: #ffffff;
+        }
+
+        #send-button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        #loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-display"></div>
+        <div id="user-input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-button" onclick="sendMessage()">Send</button>
+            <div id="loader" class="loader"></div>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById('user-input').value.trim();
+            if (userInput === '') return; // Do nothing if input is empty
+            
+            const chatDisplay = document.getElementById('chat-display');
+            const loader = document.getElementById('loader');
+
+            // Display user message
+            const userMessageElement = document.createElement('div');
+            userMessageElement.classList.add('message', 'user-message');
+            userMessageElement.textContent = `You: ${userInput}`;
+            chatDisplay.appendChild(userMessageElement);
+
+            // Show loader and hide send button
+            loader.style.display = 'inline-block';
+            document.getElementById('send-button').style.display = 'none';
+
+            // Send request to the Flask backend
+            fetch('ollama/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'mistral',
+                    prompt: userInput,
+                    stream: false
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loader and show send button
+                loader.style.display = 'none';
+                document.getElementById('send-button').style.display = 'inline-block';
+
+                // Display bot response
+                const botMessageElement = document.createElement('div');
+                botMessageElement.classList.add('message', 'bot-message');
+                botMessageElement.textContent = `Bot: ${data.response}`;
+                chatDisplay.appendChild(botMessageElement);
+
+                // Scroll to the bottom of the chat display
+                chatDisplay.scrollTop = chatDisplay.scrollHeight;
+            })
+            .catch(error => console.error('Error:', error));
+
+            // Clear the user input
+            document.getElementById('user-input').value = '';
+        }
+
+        // Handle Enter key press
+        document.getElementById('user-input').addEventListener('keypress', function(event) {
+            if (event.keyCode === 13) {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
